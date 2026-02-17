@@ -1595,448 +1595,428 @@
             document.getElementById('currentYear').textContent = new Date().getFullYear();
         }
 
-        // CV PDF Generation - Initialize after DOM is ready and libraries loaded
-        let cvInitAttempts = 0;
-        const maxCvInitAttempts = 10;
-        
-        function initCVGenerator() {
-            console.log('CV Generator: Attempt ' + (cvInitAttempts + 1));
+        // CV PDF Generation - Global function for inline onclick
+        window.generateCV = async function() {
+            console.log('generateCV called');
             
             // Check if jsPDF is available
             if (!window.jspdf || !window.jspdf.jsPDF) {
-                console.error('jsPDF library not loaded yet');
-                cvInitAttempts++;
-                if (cvInitAttempts < maxCvInitAttempts) {
-                    console.log('Retrying in 500ms...');
-                    setTimeout(initCVGenerator, 500);
-                } else {
-                    console.error('Failed to load jsPDF after ' + maxCvInitAttempts + ' attempts');
-                }
+                alert('PDF library not loaded yet. Please wait a moment and try again.');
                 return;
             }
             
-            console.log('jsPDF loaded successfully');
             const { jsPDF } = window.jspdf;
-            
             const cvBtn = document.getElementById('cvDownloadBtn');
-            if (!cvBtn) {
-                console.error('CV download button not found');
-                return;
-            }
-            console.log('CV button found, attaching click handler');
             
-            // Remove any existing listeners to prevent duplicates
-            const newBtn = cvBtn.cloneNode(true);
-            cvBtn.parentNode.replaceChild(newBtn, cvBtn);
-            
-            newBtn.addEventListener('click', async function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('CV button clicked!');
+            const originalContent = cvBtn.innerHTML;
+            cvBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            cvBtn.disabled = true;
+
+            try {
+                const isRTL = currentLang === 'ar';
+                const doc = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4',
+                    putOnlyUsedFonts: true,
+                    floatPrecision: 16
+                });
                 
-                const originalContent = newBtn.innerHTML;
-                newBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                newBtn.disabled = true;
+                console.log('PDF document created');
 
-                try {
-                    const isRTL = currentLang === 'ar';
-                    const doc = new jsPDF({
-                        orientation: 'portrait',
-                        unit: 'mm',
-                        format: 'a4',
-                        putOnlyUsedFonts: true,
-                        floatPrecision: 16
-                    });
-                    
-                    console.log('PDF document created');
+                // CV Data from Hugo params
+                const cvData = {
+                    name: {{ .Site.Params.hero.name | jsonify }},
+                    nameAr: {{ .Site.Params.ar.hero.name | jsonify }},
+                    tagline: {{ .Site.Params.hero.tagline | jsonify }},
+                    taglineAr: {{ .Site.Params.ar.hero.tagline | jsonify }},
+                    graduation: {{ .Site.Params.hero.graduation | jsonify }},
+                    graduationAr: {{ .Site.Params.ar.hero.graduation | jsonify }},
+                    profileImage: {{ .Site.Params.hero.profile_image | jsonify }},
+                    university: {{ .Site.Params.education.university | jsonify }},
+                    universityAr: {{ .Site.Params.ar.education.university | jsonify }},
+                    gradYear: {{ .Site.Params.education.graduation_year | jsonify }},
+                    phone: {{ .Site.Params.contact.phone | jsonify }},
+                    email: {{ .Site.Params.contact.email | jsonify }},
+                    address: {{ .Site.Params.contact.location.address | jsonify }},
+                    addressAr: {{ .Site.Params.ar.contact.location.address | jsonify }},
+                    professionalSummary: {{ .Site.Params.cv.professional_summary | jsonify }},
+                    professionalSummaryAr: {{ .Site.Params.ar.cv.professional_summary | jsonify }},
+                    filename: {{ .Site.Params.cv.filename | jsonify }},
+                    filenameAr: {{ .Site.Params.ar.cv.filename | jsonify }},
+                    skills: {
+                        clinical: {{ .Site.Params.skills.clinical | jsonify }},
+                        clinicalAr: {{ .Site.Params.ar.skills.clinical | jsonify }},
+                        digital: {{ .Site.Params.skills.digital | jsonify }},
+                        digitalAr: {{ .Site.Params.ar.skills.digital | jsonify }},
+                        soft: {{ .Site.Params.skills.soft | jsonify }},
+                        softAr: {{ .Site.Params.ar.skills.soft | jsonify }}
+                    },
+                    timeline: {{ .Site.Params.education.timeline | jsonify }},
+                    timelineAr: {{ .Site.Params.ar.education.timeline | jsonify }},
+                    cases: {{ .Site.Params.clinical_cases | jsonify }}
+                };
+                
+                console.log('CV data loaded, generating PDF...');
 
-                    // CV Data from Hugo params
-                    const cvData = {
-                        name: {{ .Site.Params.hero.name | jsonify }},
-                        nameAr: {{ .Site.Params.ar.hero.name | jsonify }},
-                        tagline: {{ .Site.Params.hero.tagline | jsonify }},
-                        taglineAr: {{ .Site.Params.ar.hero.tagline | jsonify }},
-                        graduation: {{ .Site.Params.hero.graduation | jsonify }},
-                        graduationAr: {{ .Site.Params.ar.hero.graduation | jsonify }},
-                        profileImage: {{ .Site.Params.hero.profile_image | jsonify }},
-                        university: {{ .Site.Params.education.university | jsonify }},
-                        universityAr: {{ .Site.Params.ar.education.university | jsonify }},
-                        gradYear: {{ .Site.Params.education.graduation_year | jsonify }},
-                        phone: {{ .Site.Params.contact.phone | jsonify }},
-                        email: {{ .Site.Params.contact.email | jsonify }},
-                        address: {{ .Site.Params.contact.location.address | jsonify }},
-                        addressAr: {{ .Site.Params.ar.contact.location.address | jsonify }},
-                        professionalSummary: {{ .Site.Params.cv.professional_summary | jsonify }},
-                        professionalSummaryAr: {{ .Site.Params.ar.cv.professional_summary | jsonify }},
-                        filename: {{ .Site.Params.cv.filename | jsonify }},
-                        filenameAr: {{ .Site.Params.ar.cv.filename | jsonify }},
-                        skills: {
-                            clinical: {{ .Site.Params.skills.clinical | jsonify }},
-                            clinicalAr: {{ .Site.Params.ar.skills.clinical | jsonify }},
-                            digital: {{ .Site.Params.skills.digital | jsonify }},
-                            digitalAr: {{ .Site.Params.ar.skills.digital | jsonify }},
-                            soft: {{ .Site.Params.skills.soft | jsonify }},
-                            softAr: {{ .Site.Params.ar.skills.soft | jsonify }}
-                        },
-                        timeline: {{ .Site.Params.education.timeline | jsonify }},
-                        timelineAr: {{ .Site.Params.ar.education.timeline | jsonify }},
-                        cases: {{ .Site.Params.clinical_cases | jsonify }}
-                    };
-                    
-                    console.log('CV data loaded, generating PDF...');
+                // Colors
+                const primaryColor = [37, 99, 235];
+                const secondaryColor = [124, 58, 237];
+                const textColor = [31, 41, 55];
+                const lightTextColor = [107, 114, 128];
+                const whiteColor = [255, 255, 255];
 
-                    // Colors
-                    const primaryColor = [37, 99, 235];
-                    const secondaryColor = [124, 58, 237];
-                    const textColor = [31, 41, 55];
-                    const lightTextColor = [107, 114, 128];
-                    const whiteColor = [255, 255, 255];
+                // Margins and layout
+                const margin = 15;
+                const pageWidth = 210;
+                const pageHeight = 297;
+                const contentWidth = pageWidth - (margin * 2);
+                let yPos = margin;
 
-                    // Margins and layout
-                    const margin = 15;
-                    const pageWidth = 210;
-                    const pageHeight = 297;
-                    const contentWidth = pageWidth - (margin * 2);
-                    let yPos = margin;
+                // Helper functions
+                function addText(text, x, y, options = {}) {
+                    const {
+                        fontSize = 11,
+                        fontStyle = 'normal',
+                        color = textColor,
+                        align = isRTL ? 'right' : 'left'
+                    } = options;
 
-                    // Helper functions
-                    function addText(text, x, y, options = {}) {
-                        const {
-                            fontSize = 11,
-                            fontStyle = 'normal',
-                            color = textColor,
-                            align = isRTL ? 'right' : 'left'
-                        } = options;
+                    doc.setFontSize(fontSize);
+                    doc.setFont('helvetica', fontStyle);
+                    doc.setTextColor(color[0], color[1], color[2]);
 
-                        doc.setFontSize(fontSize);
-                        doc.setFont('helvetica', fontStyle);
-                        doc.setTextColor(color[0], color[1], color[2]);
-
-                        if (align === 'center') {
-                            doc.text(text, pageWidth / 2, y, { align: 'center' });
-                        } else if (align === 'right') {
-                            doc.text(text, x || (pageWidth - margin), y, { align: 'right' });
-                        } else {
-                            doc.text(text, x || margin, y);
-                        }
+                    if (align === 'center') {
+                        doc.text(text, pageWidth / 2, y, { align: 'center' });
+                    } else if (align === 'right') {
+                        doc.text(text, x || (pageWidth - margin), y, { align: 'right' });
+                    } else {
+                        doc.text(text, x || margin, y);
                     }
+                }
 
-                    function addSectionHeader(title, y) {
-                        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                        doc.rect(margin - 3, y - 4, contentWidth + 6, 10, 'F');
-                        
-                        addText(title.toUpperCase(), margin, y + 2, {
-                            fontSize: 10,
-                            fontStyle: 'bold',
-                            color: whiteColor
-                        });
-
-                        return y + 12;
-                    }
-
-                    function addHorizontalLine(y) {
-                        doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                        doc.setLineWidth(0.5);
-                        doc.line(margin, y, pageWidth - margin, y);
-                    }
-
-                    // ===== HEADER SECTION =====
+                function addSectionHeader(title, y) {
                     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                    doc.rect(0, 0, pageWidth, 50, 'F');
-
-                    // Name
-                    addText(isRTL ? cvData.nameAr : cvData.name, margin, 25, {
-                        fontSize: 24,
+                    doc.rect(margin - 3, y - 4, contentWidth + 6, 10, 'F');
+                    
+                    addText(title.toUpperCase(), margin, y + 2, {
+                        fontSize: 10,
                         fontStyle: 'bold',
                         color: whiteColor
                     });
 
-                    // Tagline/Title
-                    addText(isRTL ? cvData.taglineAr : cvData.tagline, margin, 35, {
-                        fontSize: 12,
-                        fontStyle: 'normal',
-                        color: whiteColor
-                    });
+                    return y + 12;
+                }
 
-                    // Graduation info
-                    addText(isRTL ? cvData.graduationAr : cvData.graduation, margin, 45, {
-                        fontSize: 10,
-                        fontStyle: 'italic',
-                        color: whiteColor
-                    });
+                function addHorizontalLine(y) {
+                    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                    doc.setLineWidth(0.5);
+                    doc.line(margin, y, pageWidth - margin, y);
+                }
 
-                    // Profile image (right side)
-                    try {
-                        const img = new Image();
-                        img.crossOrigin = 'anonymous';
-                        img.src = cvData.profileImage;
-                        await new Promise((resolve, reject) => {
-                            img.onload = resolve;
-                            img.onerror = () => reject(new Error('Image load failed'));
-                            setTimeout(() => reject(new Error('Image load timeout')), 5000);
+                // ===== HEADER SECTION =====
+                doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                doc.rect(0, 0, pageWidth, 50, 'F');
+
+                // Name
+                addText(isRTL ? cvData.nameAr : cvData.name, margin, 25, {
+                    fontSize: 24,
+                    fontStyle: 'bold',
+                    color: whiteColor
+                });
+
+                // Tagline/Title
+                addText(isRTL ? cvData.taglineAr : cvData.tagline, margin, 35, {
+                    fontSize: 12,
+                    fontStyle: 'normal',
+                    color: whiteColor
+                });
+
+                // Graduation info
+                addText(isRTL ? cvData.graduationAr : cvData.graduation, margin, 45, {
+                    fontSize: 10,
+                    fontStyle: 'italic',
+                    color: whiteColor
+                });
+
+                // Profile image (right side)
+                try {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.src = cvData.profileImage;
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = () => reject(new Error('Image load failed'));
+                        setTimeout(() => reject(new Error('Image load timeout')), 5000);
+                    });
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    doc.addImage(dataUrl, 'JPEG', pageWidth - margin - 35, 8, 30, 30);
+                    
+                    doc.setDrawColor(255, 255, 255);
+                    doc.setLineWidth(2);
+                    doc.rect(pageWidth - margin - 35, 8, 30, 30);
+                } catch (e) {
+                    console.log('Profile image error:', e);
+                    doc.setFillColor(200, 200, 200);
+                    doc.circle(pageWidth - margin - 20, 23, 15, 'F');
+                }
+
+                yPos = 60;
+
+                // ===== CONTACT INFO =====
+                yPos = addSectionHeader(isRTL ? 'معلومات التواصل' : 'Contact Information', yPos);
+                
+                addText(`${isRTL ? 'الهاتف' : 'Phone'}: ${cvData.phone}`, margin, yPos, { fontSize: 10 });
+                yPos += 5;
+                addText(`${isRTL ? 'البريد' : 'Email'}: ${cvData.email}`, margin, yPos, { fontSize: 10 });
+                yPos += 5;
+                addText(`${isRTL ? 'العنوان' : 'Address'}: ${isRTL ? cvData.addressAr : cvData.address}`, margin, yPos, { fontSize: 10 });
+                yPos += 10;
+
+                // ===== PROFESSIONAL SUMMARY =====
+                yPos = addSectionHeader(isRTL ? 'الملخص المهني' : 'Professional Summary', yPos);
+                
+                const summary = isRTL ? cvData.professionalSummaryAr : cvData.professionalSummary;
+                const splitSummary = doc.splitTextToSize(summary, contentWidth);
+                addText(splitSummary, margin, yPos, { fontSize: 10 });
+                yPos += splitSummary.length * 5 + 5;
+
+                // ===== EDUCATION =====
+                yPos = addSectionHeader(isRTL ? 'التعليم' : 'Education', yPos);
+                
+                addText(isRTL ? cvData.universityAr : cvData.university, margin, yPos, {
+                    fontSize: 11,
+                    fontStyle: 'bold'
+                });
+                yPos += 5;
+                
+                addText(`${isRTL ? 'تخرج' : 'Graduated'}: ${cvData.gradYear}`, margin, yPos, {
+                    fontSize: 10,
+                    color: lightTextColor
+                });
+                yPos += 8;
+
+                // ===== PROFESSIONAL EXPERIENCE =====
+                if (cvData.timeline && cvData.timeline.length > 0) {
+                    yPos = addSectionHeader(isRTL ? 'الخبرة المهنية' : 'Professional Experience', yPos);
+                    
+                    const timelineList = isRTL ? cvData.timelineAr : cvData.timeline;
+                    
+                    cvData.timeline.forEach((item, index) => {
+                        const eventText = timelineList && timelineList[index] ? timelineList[index].event : item.event;
+                        
+                        doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+                        doc.roundedRect(margin, yPos - 3, 20, 6, 1, 1, 'F');
+                        addText(String(item.year), margin + 10, yPos + 1, {
+                            fontSize: 8,
+                            fontStyle: 'bold',
+                            color: whiteColor,
+                            align: 'center'
                         });
                         
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0);
-                        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                        const splitEvent = doc.splitTextToSize(eventText, contentWidth - 25);
+                        addText(splitEvent, margin + 25, yPos + 1, { fontSize: 10 });
                         
-                        doc.addImage(dataUrl, 'JPEG', pageWidth - margin - 35, 8, 30, 30);
+                        yPos += Math.max(splitEvent.length * 4, 8) + 3;
                         
-                        doc.setDrawColor(255, 255, 255);
-                        doc.setLineWidth(2);
-                        doc.rect(pageWidth - margin - 35, 8, 30, 30);
-                    } catch (e) {
-                        console.log('Profile image error:', e);
-                        doc.setFillColor(200, 200, 200);
-                        doc.circle(pageWidth - margin - 20, 23, 15, 'F');
-                    }
-
-                    yPos = 60;
-
-                    // ===== CONTACT INFO =====
-                    yPos = addSectionHeader(isRTL ? 'معلومات التواصل' : 'Contact Information', yPos);
-                    
-                    addText(`${isRTL ? 'الهاتف' : 'Phone'}: ${cvData.phone}`, margin, yPos, { fontSize: 10 });
-                    yPos += 5;
-                    addText(`${isRTL ? 'البريد' : 'Email'}: ${cvData.email}`, margin, yPos, { fontSize: 10 });
-                    yPos += 5;
-                    addText(`${isRTL ? 'العنوان' : 'Address'}: ${isRTL ? cvData.addressAr : cvData.address}`, margin, yPos, { fontSize: 10 });
-                    yPos += 10;
-
-                    // ===== PROFESSIONAL SUMMARY =====
-                    yPos = addSectionHeader(isRTL ? 'الملخص المهني' : 'Professional Summary', yPos);
-                    
-                    const summary = isRTL ? cvData.professionalSummaryAr : cvData.professionalSummary;
-                    const splitSummary = doc.splitTextToSize(summary, contentWidth);
-                    addText(splitSummary, margin, yPos, { fontSize: 10 });
-                    yPos += splitSummary.length * 5 + 5;
-
-                    // ===== EDUCATION =====
-                    yPos = addSectionHeader(isRTL ? 'التعليم' : 'Education', yPos);
-                    
-                    addText(isRTL ? cvData.universityAr : cvData.university, margin, yPos, {
-                        fontSize: 11,
-                        fontStyle: 'bold'
+                        if (yPos > pageHeight - margin - 20) {
+                            doc.addPage();
+                            yPos = margin;
+                        }
                     });
-                    yPos += 5;
+                }
+
+                // ===== SKILLS =====
+                yPos = addSectionHeader(isRTL ? 'المهارات' : 'Skills & Competencies', yPos);
+                
+                // Clinical Skills
+                addText(isRTL ? 'المهارات السريرية' : 'Clinical Skills:', margin, yPos, {
+                    fontSize: 10,
+                    fontStyle: 'bold'
+                });
+                yPos += 5;
+                
+                const clinicalSkills = isRTL ? cvData.skills.clinicalAr : cvData.skills.clinical;
+                if (clinicalSkills && clinicalSkills.length > 0) {
+                    const skillsText = clinicalSkills.join(' • ');
+                    const splitSkills = doc.splitTextToSize(skillsText, contentWidth);
+                    addText(splitSkills, margin + 5, yPos, { fontSize: 9 });
+                    yPos += splitSkills.length * 4 + 5;
+                }
+
+                // Digital Skills
+                addText(isRTL ? 'المهارات الرقمية' : 'Digital Skills:', margin, yPos, {
+                    fontSize: 10,
+                    fontStyle: 'bold'
+                });
+                yPos += 5;
+                
+                const digitalSkills = isRTL ? cvData.skills.digitalAr : cvData.skills.digital;
+                if (digitalSkills && digitalSkills.length > 0) {
+                    const digitalText = digitalSkills.join(' • ');
+                    const splitDigital = doc.splitTextToSize(digitalText, contentWidth);
+                    addText(splitDigital, margin + 5, yPos, { fontSize: 9 });
+                    yPos += splitDigital.length * 4 + 5;
+                }
+
+                // Soft Skills
+                addText(isRTL ? 'المهارات الشخصية' : 'Soft Skills:', margin, yPos, {
+                    fontSize: 10,
+                    fontStyle: 'bold'
+                });
+                yPos += 5;
+                
+                const softSkills = isRTL ? cvData.skills.softAr : cvData.skills.soft;
+                if (softSkills && softSkills.length > 0) {
+                    const softText = softSkills.join(' • ');
+                    const splitSoft = doc.splitTextToSize(softText, contentWidth);
+                    addText(splitSoft, margin + 5, yPos, { fontSize: 9 });
+                    yPos += splitSoft.length * 4 + 8;
+                }
+
+                // Check page overflow before cases
+                if (yPos > pageHeight - margin - 40) {
+                    doc.addPage();
+                    yPos = margin;
+                }
+
+                // ===== CLINICAL CASES =====
+                if (cvData.cases && cvData.cases.length > 0) {
+                    yPos = addSectionHeader(isRTL ? 'الحالات السريرية' : 'Clinical Cases', yPos);
                     
-                    addText(`${isRTL ? 'تخرج' : 'Graduated'}: ${cvData.gradYear}`, margin, yPos, {
+                    addText(isRTL ? 'معرض الحالات السريرية المختارة' : 'Selected Clinical Cases Portfolio', margin, yPos, {
                         fontSize: 10,
+                        fontStyle: 'italic',
                         color: lightTextColor
                     });
                     yPos += 8;
 
-                    // ===== PROFESSIONAL EXPERIENCE =====
-                    if (cvData.timeline && cvData.timeline.length > 0) {
-                        yPos = addSectionHeader(isRTL ? 'الخبرة المهنية' : 'Professional Experience', yPos);
+                    for (const category of cvData.cases) {
+                        if (!category.enabled || !category.cases || category.cases.length === 0) continue;
                         
-                        const timelineList = isRTL ? cvData.timelineAr : cvData.timeline;
-                        
-                        cvData.timeline.forEach((item, index) => {
-                            const eventText = timelineList && timelineList[index] ? timelineList[index].event : item.event;
-                            
-                            doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-                            doc.roundedRect(margin, yPos - 3, 20, 6, 1, 1, 'F');
-                            addText(String(item.year), margin + 10, yPos + 1, {
-                                fontSize: 8,
-                                fontStyle: 'bold',
-                                color: whiteColor,
-                                align: 'center'
-                            });
-                            
-                            const splitEvent = doc.splitTextToSize(eventText, contentWidth - 25);
-                            addText(splitEvent, margin + 25, yPos + 1, { fontSize: 10 });
-                            
-                            yPos += Math.max(splitEvent.length * 4, 8) + 3;
-                            
-                            if (yPos > pageHeight - margin - 20) {
+                        const categoryName = isRTL ? (category.category_ar || category.category) : category.category;
+                        addText(categoryName, margin, yPos, {
+                            fontSize: 11,
+                            fontStyle: 'bold',
+                            color: secondaryColor
+                        });
+                        yPos += 6;
+
+                        // Cases in this category - 2 per row
+                        const casesPerRow = 2;
+                        const caseWidth = (contentWidth - 5) / casesPerRow;
+                        const caseHeight = 35;
+                        let xOffset = margin;
+                        let caseCount = 0;
+
+                        for (const caseItem of category.cases) {
+                            try {
+                                const img = new Image();
+                                img.crossOrigin = 'anonymous';
+                                img.src = caseItem.photo;
+                                await new Promise((resolve, reject) => {
+                                    img.onload = resolve;
+                                    img.onerror = () => reject(new Error('Case image load failed'));
+                                    setTimeout(() => reject(new Error('Case image timeout')), 5000);
+                                });
+                                
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+                                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                                
+                                doc.addImage(dataUrl, 'JPEG', xOffset, yPos, caseWidth - 5, 25);
+                                
+                                doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                                doc.setLineWidth(0.5);
+                                doc.rect(xOffset, yPos, caseWidth - 5, 25);
+                                
+                                const desc = isRTL ? (caseItem.description_ar || caseItem.description) : caseItem.description;
+                                const splitDesc = doc.splitTextToSize(desc, caseWidth - 7);
+                                addText(splitDesc, xOffset + 2, yPos + 30, { 
+                                    fontSize: 7,
+                                    color: lightTextColor 
+                                });
+                                
+                            } catch (e) {
+                                doc.setFillColor(230, 230, 230);
+                                doc.rect(xOffset, yPos, caseWidth - 5, 25, 'F');
+                                addText(isRTL ? 'صورة' : 'Image', xOffset + (caseWidth/2) - 5, yPos + 15, {
+                                    fontSize: 8,
+                                    color: lightTextColor
+                                });
+                            }
+
+                            caseCount++;
+                            if (caseCount % casesPerRow === 0) {
+                                xOffset = margin;
+                                yPos += caseHeight + 5;
+                            } else {
+                                xOffset += caseWidth;
+                            }
+
+                            if (yPos > pageHeight - margin - 40) {
                                 doc.addPage();
                                 yPos = margin;
+                                xOffset = margin;
+                                caseCount = 0;
                             }
-                        });
-                    }
-
-                    // ===== SKILLS =====
-                    yPos = addSectionHeader(isRTL ? 'المهارات' : 'Skills & Competencies', yPos);
-                    
-                    // Clinical Skills
-                    addText(isRTL ? 'المهارات السريرية' : 'Clinical Skills:', margin, yPos, {
-                        fontSize: 10,
-                        fontStyle: 'bold'
-                    });
-                    yPos += 5;
-                    
-                    const clinicalSkills = isRTL ? cvData.skills.clinicalAr : cvData.skills.clinical;
-                    if (clinicalSkills && clinicalSkills.length > 0) {
-                        const skillsText = clinicalSkills.join(' • ');
-                        const splitSkills = doc.splitTextToSize(skillsText, contentWidth);
-                        addText(splitSkills, margin + 5, yPos, { fontSize: 9 });
-                        yPos += splitSkills.length * 4 + 5;
-                    }
-
-                    // Digital Skills
-                    addText(isRTL ? 'المهارات الرقمية' : 'Digital Skills:', margin, yPos, {
-                        fontSize: 10,
-                        fontStyle: 'bold'
-                    });
-                    yPos += 5;
-                    
-                    const digitalSkills = isRTL ? cvData.skills.digitalAr : cvData.skills.digital;
-                    if (digitalSkills && digitalSkills.length > 0) {
-                        const digitalText = digitalSkills.join(' • ');
-                        const splitDigital = doc.splitTextToSize(digitalText, contentWidth);
-                        addText(splitDigital, margin + 5, yPos, { fontSize: 9 });
-                        yPos += splitDigital.length * 4 + 5;
-                    }
-
-                    // Soft Skills
-                    addText(isRTL ? 'المهارات الشخصية' : 'Soft Skills:', margin, yPos, {
-                        fontSize: 10,
-                        fontStyle: 'bold'
-                    });
-                    yPos += 5;
-                    
-                    const softSkills = isRTL ? cvData.skills.softAr : cvData.skills.soft;
-                    if (softSkills && softSkills.length > 0) {
-                        const softText = softSkills.join(' • ');
-                        const splitSoft = doc.splitTextToSize(softText, contentWidth);
-                        addText(splitSoft, margin + 5, yPos, { fontSize: 9 });
-                        yPos += splitSoft.length * 4 + 8;
-                    }
-
-                    // Check page overflow before cases
-                    if (yPos > pageHeight - margin - 40) {
-                        doc.addPage();
-                        yPos = margin;
-                    }
-
-                    // ===== CLINICAL CASES =====
-                    if (cvData.cases && cvData.cases.length > 0) {
-                        yPos = addSectionHeader(isRTL ? 'الحالات السريرية' : 'Clinical Cases', yPos);
-                        
-                        addText(isRTL ? 'معرض الحالات السريرية المختارة' : 'Selected Clinical Cases Portfolio', margin, yPos, {
-                            fontSize: 10,
-                            fontStyle: 'italic',
-                            color: lightTextColor
-                        });
-                        yPos += 8;
-
-                        for (const category of cvData.cases) {
-                            if (!category.enabled || !category.cases || category.cases.length === 0) continue;
-                            
-                            const categoryName = isRTL ? (category.category_ar || category.category) : category.category;
-                            addText(categoryName, margin, yPos, {
-                                fontSize: 11,
-                                fontStyle: 'bold',
-                                color: secondaryColor
-                            });
-                            yPos += 6;
-
-                            // Cases in this category - 2 per row
-                            const casesPerRow = 2;
-                            const caseWidth = (contentWidth - 5) / casesPerRow;
-                            const caseHeight = 35;
-                            let xOffset = margin;
-                            let caseCount = 0;
-
-                            for (const caseItem of category.cases) {
-                                try {
-                                    const img = new Image();
-                                    img.crossOrigin = 'anonymous';
-                                    img.src = caseItem.photo;
-                                    await new Promise((resolve, reject) => {
-                                        img.onload = resolve;
-                                        img.onerror = () => reject(new Error('Case image load failed'));
-                                        setTimeout(() => reject(new Error('Case image timeout')), 5000);
-                                    });
-                                    
-                                    const canvas = document.createElement('canvas');
-                                    canvas.width = img.width;
-                                    canvas.height = img.height;
-                                    const ctx = canvas.getContext('2d');
-                                    ctx.drawImage(img, 0, 0);
-                                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                                    
-                                    doc.addImage(dataUrl, 'JPEG', xOffset, yPos, caseWidth - 5, 25);
-                                    
-                                    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                                    doc.setLineWidth(0.5);
-                                    doc.rect(xOffset, yPos, caseWidth - 5, 25);
-                                    
-                                    const desc = isRTL ? (caseItem.description_ar || caseItem.description) : caseItem.description;
-                                    const splitDesc = doc.splitTextToSize(desc, caseWidth - 7);
-                                    addText(splitDesc, xOffset + 2, yPos + 30, { 
-                                        fontSize: 7,
-                                        color: lightTextColor 
-                                    });
-                                    
-                                } catch (e) {
-                                    doc.setFillColor(230, 230, 230);
-                                    doc.rect(xOffset, yPos, caseWidth - 5, 25, 'F');
-                                    addText(isRTL ? 'صورة' : 'Image', xOffset + (caseWidth/2) - 5, yPos + 15, {
-                                        fontSize: 8,
-                                        color: lightTextColor
-                                    });
-                                }
-
-                                caseCount++;
-                                if (caseCount % casesPerRow === 0) {
-                                    xOffset = margin;
-                                    yPos += caseHeight + 5;
-                                } else {
-                                    xOffset += caseWidth;
-                                }
-
-                                if (yPos > pageHeight - margin - 40) {
-                                    doc.addPage();
-                                    yPos = margin;
-                                    xOffset = margin;
-                                    caseCount = 0;
-                                }
-                            }
-
-                            if (caseCount % casesPerRow !== 0) {
-                                yPos += caseHeight + 5;
-                            }
-                            
-                            yPos += 5;
                         }
+
+                        if (caseCount % casesPerRow !== 0) {
+                            yPos += caseHeight + 5;
+                        }
+                        
+                        yPos += 5;
                     }
-
-                    // ===== FOOTER =====
-                    const footerY = pageHeight - margin + 5;
-                    addHorizontalLine(footerY - 5);
-                    addText(isRTL ? 'تم إنشاء هذا السيرة الذاتية بواسطة dentalhubs.github.io/micko1' : 'Generated from dentalhubs.github.io/micko1', pageWidth / 2, footerY, {
-                        fontSize: 8,
-                        color: lightTextColor,
-                        align: 'center'
-                    });
-
-                    // Save PDF
-                    const filename = isRTL ? cvData.filenameAr : cvData.filename;
-                    doc.save(filename);
-                    console.log('PDF saved successfully:', filename);
-
-                } catch (error) {
-                    console.error('Error generating CV:', error);
-                    alert(isRTL ? 'حدث خطأ أثناء إنشاء السيرة الذاتية. يرجى المحاولة مرة أخرى.' : 'Error generating CV. Please try again. Error: ' + error.message);
-                } finally {
-                    newBtn.innerHTML = originalContent;
-                    newBtn.disabled = false;
                 }
-            });
-        }
+
+                // ===== FOOTER =====
+                const footerY = pageHeight - margin + 5;
+                addHorizontalLine(footerY - 5);
+                addText(isRTL ? 'تم إنشاء هذا السيرة الذاتية بواسطة dentalhubs.github.io/micko1' : 'Generated from dentalhubs.github.io/micko1', pageWidth / 2, footerY, {
+                    fontSize: 8,
+                    color: lightTextColor,
+                    align: 'center'
+                });
+
+                // Save PDF
+                const filename = isRTL ? cvData.filenameAr : cvData.filename;
+                doc.save(filename);
+                console.log('PDF saved successfully:', filename);
+
+            } catch (error) {
+                console.error('Error generating CV:', error);
+                alert(isRTL ? 'حدث خطأ أثناء إنشاء السيرة الذاتية. يرجى المحاولة مرة أخرى.' : 'Error generating CV. Please try again. Error: ' + error.message);
+            } finally {
+                cvBtn.innerHTML = originalContent;
+                cvBtn.disabled = false;
+            }
+        };
+
+        // Auto-check library load
+        window.addEventListener('load', function() {
+            console.log('Window loaded, jsPDF status:', !!window.jspdf);
+        });
     </script>
 
     <!-- Floating CV Download Button -->
     <button type="button" class="floating-btn" id="cvDownloadBtn" aria-label="Download CV" 
             data-en="{{ .Site.Params.cv.labels.download_cv }}" 
-            data-ar="{{ .Site.Params.ar.cv.labels.download_cv }}">
+            data-ar="{{ .Site.Params.ar.cv.labels.download_cv }}"
+            onclick="alert('Button clicked!'); if(typeof window.generateCV === 'function') window.generateCV(); else alert('CV function not found'); return false;">
         <i class="fas fa-file-download"></i>
         <span class="floating-btn-label" id="cvBtnLabel">{{ .Site.Params.cv.labels.download_cv }}</span>
     </button>
 </body>
 </html>
+10
