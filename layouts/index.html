@@ -1611,11 +1611,15 @@
                 const { jsPDF } = window.jspdf;
                 const isRTL = currentLang === 'ar';
                 
-                // Get data safely
+                // Get data safely - ensure all values are valid
                 const getArray = (val) => Array.isArray(val) ? val : [];
-                const getStr = (val) => typeof val === 'string' ? val : String(val || '');
+                const getStr = (val) => {
+                    if (val === null || val === undefined) return '';
+                    if (typeof val === 'string') return val;
+                    return String(val);
+                };
                 
-                // CV Data
+                // CV Data - all sanitized
                 const name = getStr({{ .Site.Params.hero.name | jsonify }});
                 const nameAr = getStr({{ .Site.Params.ar.hero.name | jsonify }});
                 const tagline = getStr({{ .Site.Params.hero.tagline | jsonify }});
@@ -1640,7 +1644,6 @@
                 const softSkillsAr = getArray({{ .Site.Params.ar.skills.soft | jsonify }});
                 const timeline = getArray({{ .Site.Params.education.timeline | jsonify }});
                 const timelineAr = getArray({{ .Site.Params.ar.education.timeline | jsonify }});
-                const cases = getArray({{ .Site.Params.clinical_cases | jsonify }});
                 
                 // Create PDF
                 const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -1654,25 +1657,30 @@
                 const contentWidth = pageWidth - (margin * 2);
                 let yPos = margin;
                 
-                // Helper functions
+                // Helper functions with validation
                 const addText = (text, x, y, opts = {}) => {
+                    // Ensure text is a valid string
+                    const safeText = getStr(text);
+                    if (!safeText) return; // Skip empty text
+                    
                     doc.setFontSize(opts.fontSize || 11);
                     doc.setFont('helvetica', opts.fontStyle || 'normal');
                     doc.setTextColor(opts.color || textColor);
                     const align = opts.align || (isRTL ? 'right' : 'left');
                     if (align === 'center') {
-                        doc.text(text, pageWidth / 2, y, { align: 'center' });
+                        doc.text(safeText, pageWidth / 2, y, { align: 'center' });
                     } else if (align === 'right') {
-                        doc.text(text, x || (pageWidth - margin), y, { align: 'right' });
+                        doc.text(safeText, x || (pageWidth - margin), y, { align: 'right' });
                     } else {
-                        doc.text(text, x || margin, y);
+                        doc.text(safeText, x || margin, y);
                     }
                 };
                 
                 const addHeader = (title, y) => {
+                    const safeTitle = getStr(title);
                     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
                     doc.rect(margin - 3, y - 4, contentWidth + 6, 10, 'F');
-                    addText(title.toUpperCase(), margin, y + 2, { fontSize: 10, fontStyle: 'bold', color: whiteColor });
+                    addText(safeTitle.toUpperCase(), margin, y + 2, { fontSize: 10, fontStyle: 'bold', color: whiteColor });
                     return y + 12;
                 };
                 
@@ -1696,9 +1704,11 @@
                 // Summary
                 yPos = addHeader(isRTL ? 'الملخص' : 'Summary', yPos);
                 const summaryText = isRTL ? summaryAr : summary;
-                const splitSummary = doc.splitTextToSize(summaryText, contentWidth);
-                addText(splitSummary, margin, yPos, { fontSize: 10 });
-                yPos += splitSummary.length * 5 + 8;
+                if (summaryText) {
+                    const splitSummary = doc.splitTextToSize(summaryText, contentWidth);
+                    addText(splitSummary, margin, yPos, { fontSize: 10 });
+                    yPos += splitSummary.length * 5 + 8;
+                }
                 
                 // Education
                 yPos = addHeader(isRTL ? 'التعليم' : 'Education', yPos);
@@ -1712,10 +1722,11 @@
                 if (timeline.length > 0) {
                     yPos = addHeader(isRTL ? 'الخبرة' : 'Experience', yPos);
                     timeline.forEach((item, i) => {
-                        const evt = expList[i] && expList[i].event ? expList[i].event : (item.event || '');
+                        const year = getStr(item.year);
+                        const evt = getStr(expList[i] && expList[i].event ? expList[i].event : (item.event || ''));
                         doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
                         doc.roundedRect(margin, yPos - 3, 18, 6, 1, 1, 'F');
-                        addText(String(item.year || ''), margin + 9, yPos + 1, { fontSize: 8, color: whiteColor, align: 'center' });
+                        addText(year, margin + 9, yPos + 1, { fontSize: 8, color: whiteColor, align: 'center' });
                         const splitEvt = doc.splitTextToSize(evt, contentWidth - 28);
                         addText(splitEvt, margin + 22, yPos + 1, { fontSize: 9 });
                         yPos += Math.max(splitEvt.length * 4, 8) + 4;
@@ -1750,8 +1761,9 @@
                     yPos += 8;
                 }
                 
-                // Save
-                doc.save(filename || 'CV.pdf');
+                // Save with validation
+                const finalFilename = getStr(filename) || 'CV.pdf';
+                doc.save(finalFilename);
                 
             } catch (err) {
                 alert('CV Error: ' + err.message);
@@ -1778,4 +1790,3 @@
     </button>
 </body>
 </html>
-18
