@@ -1812,12 +1812,15 @@
                 yPos += 8;
 
                 // ===== PROFESSIONAL EXPERIENCE =====
-                if (cvData.timeline && cvData.timeline.length > 0) {
+                alert('CV: Checking timeline');
+                const timelineArray = Array.isArray(cvData.timeline) ? cvData.timeline : [];
+                alert('CV: Timeline is array: ' + Array.isArray(cvData.timeline) + ', length: ' + timelineArray.length);
+                if (timelineArray.length > 0) {
                     yPos = addSectionHeader(isRTL ? 'الخبرة المهنية' : 'Professional Experience', yPos);
                     
                     const timelineList = isRTL ? cvData.timelineAr : cvData.timeline;
                     
-                    cvData.timeline.forEach((item, index) => {
+                    timelineArray.forEach((item, index) => {
                         const eventText = timelineList && timelineList[index] ? timelineList[index].event : item.event;
                         
                         doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
