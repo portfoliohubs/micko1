@@ -2013,10 +2013,26 @@
     <button type="button" class="floating-btn" id="cvDownloadBtn" aria-label="Download CV" 
             data-en="{{ .Site.Params.cv.labels.download_cv }}" 
             data-ar="{{ .Site.Params.ar.cv.labels.download_cv }}"
-            onclick="alert('Button clicked!'); if(typeof window.generateCV === 'function') window.generateCV(); else alert('CV function not found'); return false;">
+            onclick="
+                alert('Step 1: Button clicked');
+                console.log('generateCV exists?', typeof window.generateCV);
+                console.log('jspdf exists?', !!window.jspdf);
+                if (typeof window.generateCV === 'function') {
+                    alert('Step 2: Function found, calling...');
+                    try {
+                        window.generateCV();
+                        alert('Step 3: Function executed');
+                    } catch(e) {
+                        alert('Error: ' + e.message);
+                        console.error(e);
+                    }
+                } else {
+                    alert('Step 2 FAILED: generateCV is ' + typeof window.generateCV);
+                }
+                return false;
+            ">
         <i class="fas fa-file-download"></i>
         <span class="floating-btn-label" id="cvBtnLabel">{{ .Site.Params.cv.labels.download_cv }}</span>
     </button>
 </body>
 </html>
-10
