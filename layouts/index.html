@@ -1597,13 +1597,16 @@
 
         // CV PDF Generation - Global function for inline onclick
         window.generateCV = async function() {
+            alert('CV: Function started');
             console.log('generateCV called');
             
             // Check if jsPDF is available
             if (!window.jspdf || !window.jspdf.jsPDF) {
-                alert('PDF library not loaded yet. Please wait a moment and try again.');
+                alert('CV: jsPDF not loaded');
+                console.error('jsPDF library not loaded');
                 return;
             }
+            alert('CV: jsPDF loaded');
             
             const { jsPDF } = window.jspdf;
             const cvBtn = document.getElementById('cvDownloadBtn');
@@ -1613,7 +1616,9 @@
             cvBtn.disabled = true;
 
             try {
+                alert('CV: Starting try block');
                 const isRTL = currentLang === 'ar';
+                alert('CV: Creating PDF doc');
                 const doc = new jsPDF({
                     orientation: 'portrait',
                     unit: 'mm',
@@ -1621,10 +1626,12 @@
                     putOnlyUsedFonts: true,
                     floatPrecision: 16
                 });
+                alert('CV: PDF doc created');
                 
                 console.log('PDF document created');
 
                 // CV Data from Hugo params
+                alert('CV: Loading data');
                 const cvData = {
                     name: {{ .Site.Params.hero.name | jsonify }},
                     nameAr: {{ .Site.Params.ar.hero.name | jsonify }},
@@ -1656,6 +1663,7 @@
                     timelineAr: {{ .Site.Params.ar.education.timeline | jsonify }},
                     cases: {{ .Site.Params.clinical_cases | jsonify }}
                 };
+                alert('CV: Data loaded');
                 
                 console.log('CV data loaded, generating PDF...');
 
@@ -1990,13 +1998,16 @@
                 });
 
                 // Save PDF
+                alert('CV: About to save PDF');
                 const filename = isRTL ? cvData.filenameAr : cvData.filename;
+                alert('CV: Filename: ' + filename);
                 doc.save(filename);
+                alert('CV: PDF saved!');
                 console.log('PDF saved successfully:', filename);
 
             } catch (error) {
+                alert('CV Error: ' + error.message);
                 console.error('Error generating CV:', error);
-                alert(isRTL ? 'حدث خطأ أثناء إنشاء السيرة الذاتية. يرجى المحاولة مرة أخرى.' : 'Error generating CV. Please try again. Error: ' + error.message);
             } finally {
                 cvBtn.innerHTML = originalContent;
                 cvBtn.disabled = false;
