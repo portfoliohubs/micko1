@@ -1596,58 +1596,47 @@
         }
 
         // CV PDF Generation - Initialize after DOM is ready and libraries loaded
+        let cvInitAttempts = 0;
+        const maxCvInitAttempts = 10;
+        
         function initCVGenerator() {
+            console.log('CV Generator: Attempt ' + (cvInitAttempts + 1));
+            
             // Check if jsPDF is available
             if (!window.jspdf || !window.jspdf.jsPDF) {
-                console.error('jsPDF library not loaded');
+                console.error('jsPDF library not loaded yet');
+                cvInitAttempts++;
+                if (cvInitAttempts < maxCvInitAttempts) {
+                    console.log('Retrying in 500ms...');
+                    setTimeout(initCVGenerator, 500);
+                } else {
+                    console.error('Failed to load jsPDF after ' + maxCvInitAttempts + ' attempts');
+                }
                 return;
             }
             
+            console.log('jsPDF loaded successfully');
             const { jsPDF } = window.jspdf;
             
-            // CV Data from Hugo params
-            const cvData = {
-                name: {{ .Site.Params.hero.name | jsonify }},
-                nameAr: {{ .Site.Params.ar.hero.name | jsonify }},
-                tagline: {{ .Site.Params.hero.tagline | jsonify }},
-                taglineAr: {{ .Site.Params.ar.hero.tagline | jsonify }},
-                graduation: {{ .Site.Params.hero.graduation | jsonify }},
-                graduationAr: {{ .Site.Params.ar.hero.graduation | jsonify }},
-                profileImage: {{ .Site.Params.hero.profile_image | jsonify }},
-                university: {{ .Site.Params.education.university | jsonify }},
-                universityAr: {{ .Site.Params.ar.education.university | jsonify }},
-                gradYear: {{ .Site.Params.education.graduation_year | jsonify }},
-                phone: {{ .Site.Params.contact.phone | jsonify }},
-                email: {{ .Site.Params.contact.email | jsonify }},
-                address: {{ .Site.Params.contact.location.address | jsonify }},
-                addressAr: {{ .Site.Params.ar.contact.location.address | jsonify }},
-                professionalSummary: {{ .Site.Params.cv.professional_summary | jsonify }},
-                professionalSummaryAr: {{ .Site.Params.ar.cv.professional_summary | jsonify }},
-                filename: {{ .Site.Params.cv.filename | jsonify }},
-                filenameAr: {{ .Site.Params.ar.cv.filename | jsonify }},
-                skills: {
-                    clinical: {{ .Site.Params.skills.clinical | jsonify }},
-                    clinicalAr: {{ .Site.Params.ar.skills.clinical | jsonify }},
-                    digital: {{ .Site.Params.skills.digital | jsonify }},
-                    digitalAr: {{ .Site.Params.ar.skills.digital | jsonify }},
-                    soft: {{ .Site.Params.skills.soft | jsonify }},
-                    softAr: {{ .Site.Params.ar.skills.soft | jsonify }}
-                },
-                timeline: {{ .Site.Params.education.timeline | jsonify }},
-                timelineAr: {{ .Site.Params.ar.education.timeline | jsonify }},
-                cases: {{ .Site.Params.clinical_cases | jsonify }}
-            };
-
             const cvBtn = document.getElementById('cvDownloadBtn');
             if (!cvBtn) {
                 console.error('CV download button not found');
                 return;
             }
-
-            cvBtn.addEventListener('click', async function() {
-                const originalContent = cvBtn.innerHTML;
-                cvBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                cvBtn.disabled = true;
+            console.log('CV button found, attaching click handler');
+            
+            // Remove any existing listeners to prevent duplicates
+            const newBtn = cvBtn.cloneNode(true);
+            cvBtn.parentNode.replaceChild(newBtn, cvBtn);
+            
+            newBtn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('CV button clicked!');
+                
+                const originalContent = newBtn.innerHTML;
+                newBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                newBtn.disabled = true;
 
                 try {
                     const isRTL = currentLang === 'ar';
@@ -1658,6 +1647,43 @@
                         putOnlyUsedFonts: true,
                         floatPrecision: 16
                     });
+                    
+                    console.log('PDF document created');
+
+                    // CV Data from Hugo params
+                    const cvData = {
+                        name: {{ .Site.Params.hero.name | jsonify }},
+                        nameAr: {{ .Site.Params.ar.hero.name | jsonify }},
+                        tagline: {{ .Site.Params.hero.tagline | jsonify }},
+                        taglineAr: {{ .Site.Params.ar.hero.tagline | jsonify }},
+                        graduation: {{ .Site.Params.hero.graduation | jsonify }},
+                        graduationAr: {{ .Site.Params.ar.hero.graduation | jsonify }},
+                        profileImage: {{ .Site.Params.hero.profile_image | jsonify }},
+                        university: {{ .Site.Params.education.university | jsonify }},
+                        universityAr: {{ .Site.Params.ar.education.university | jsonify }},
+                        gradYear: {{ .Site.Params.education.graduation_year | jsonify }},
+                        phone: {{ .Site.Params.contact.phone | jsonify }},
+                        email: {{ .Site.Params.contact.email | jsonify }},
+                        address: {{ .Site.Params.contact.location.address | jsonify }},
+                        addressAr: {{ .Site.Params.ar.contact.location.address | jsonify }},
+                        professionalSummary: {{ .Site.Params.cv.professional_summary | jsonify }},
+                        professionalSummaryAr: {{ .Site.Params.ar.cv.professional_summary | jsonify }},
+                        filename: {{ .Site.Params.cv.filename | jsonify }},
+                        filenameAr: {{ .Site.Params.ar.cv.filename | jsonify }},
+                        skills: {
+                            clinical: {{ .Site.Params.skills.clinical | jsonify }},
+                            clinicalAr: {{ .Site.Params.ar.skills.clinical | jsonify }},
+                            digital: {{ .Site.Params.skills.digital | jsonify }},
+                            digitalAr: {{ .Site.Params.ar.skills.digital | jsonify }},
+                            soft: {{ .Site.Params.skills.soft | jsonify }},
+                            softAr: {{ .Site.Params.ar.skills.soft | jsonify }}
+                        },
+                        timeline: {{ .Site.Params.education.timeline | jsonify }},
+                        timelineAr: {{ .Site.Params.ar.education.timeline | jsonify }},
+                        cases: {{ .Site.Params.clinical_cases | jsonify }}
+                    };
+                    
+                    console.log('CV data loaded, generating PDF...');
 
                     // Colors
                     const primaryColor = [37, 99, 235];
@@ -1992,13 +2018,14 @@
                     // Save PDF
                     const filename = isRTL ? cvData.filenameAr : cvData.filename;
                     doc.save(filename);
+                    console.log('PDF saved successfully:', filename);
 
                 } catch (error) {
                     console.error('Error generating CV:', error);
                     alert(isRTL ? 'حدث خطأ أثناء إنشاء السيرة الذاتية. يرجى المحاولة مرة أخرى.' : 'Error generating CV. Please try again. Error: ' + error.message);
                 } finally {
-                    cvBtn.innerHTML = originalContent;
-                    cvBtn.disabled = false;
+                    newBtn.innerHTML = originalContent;
+                    newBtn.disabled = false;
                 }
             });
         }
